@@ -1,10 +1,15 @@
 -- Espera o jogo carregar completamente
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
--- Variáveis Globais de Controle
+-- =======================================================
+-- CONFIGURAÇÕES E ESTADO GLOBAL
+-- =======================================================
+_G.AutoAttack = false
+_G.AutoFarmLevel = false
+_G.AutoChest = false
 _G.AutoFruitSniper = false
 _G.AutoStoreFruits = false
-_G.VelocidadeVoo = 150 -- Velocidade padrão inicial
+_G.VelocidadeVoo = 150 -- Controlado pela barrinha
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -12,19 +17,19 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Deleta o Hub anterior se ele já estiver aberto
-if playerGui:FindFirstChild("FruitHubPremium") then
-    playerGui.FruitHubPremium:Destroy()
+-- Remove Hub duplicado
+if playerGui:FindFirstChild("MegaHubBloxFruits") then
+    playerGui.MegaHubBloxFruits:Destroy()
 end
 
--- Função de Movimentação Suave (Tween) baseada na variável global de velocidade
+-- =======================================================
+-- FUNÇÕES DE MOVIMENTAÇÃO E SEGURANÇA (TWEEN + NOCLIP)
+-- =======================================================
 local function voarPara(cframeAlvo)
     local character = player.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
         local hrp = character.HumanoidRootPart
         local distancia = (hrp.Position - cframeAlvo.Position).Magnitude
-        
-        -- Evita divisão por zero se a velocidade for muito baixa
         local vel = _G.VelocidadeVoo > 0 and _G.VelocidadeVoo or 50
         local duracaoVoo = distancia / vel
         
@@ -38,19 +43,18 @@ local function voarPara(cframeAlvo)
         
         tween:Play()
         tween.Completed:Wait()
-        
         bV:Destroy()
     end
 end
 
--- Sistema de Noclip Automático
+-- Ativa Noclip se o Farm de Baús ou de Frutas estiver ligado
 task.spawn(function()
     RunService.Stepped:Connect(function()
-        if _G.AutoFruitSniper then
+        if _G.AutoChest or _G.AutoFruitSniper or _G.AutoFarmLevel then
             local character = player.Character
             if character then
                 for _, parte in pairs(character:GetDescendants()) do
-                    if parte:IsA("BasePart") and parte.CanCollide == true then
+                    if parte:IsA("BasePart") then
                         parte.CanCollide = false
                     end
                 end
@@ -59,195 +63,177 @@ task.spawn(function()
     end)
 end)
 
--- Função para disparar Remotes com segurança
 local function dispararRemote(tipo, caminho, ...)
     local sucesso, resultado = pcall(function(...)
-        if tipo == "Function" then
-            return caminho:InvokeServer(...)
-        elseif tipo == "Event" then
-            caminho:FireServer(...)
-        end
+        if tipo == "Function" then return caminho:InvokeServer(...)
+        elseif tipo == "Event" then caminho:FireServer(...) end
     end, ...)
     return sucesso, resultado
 end
 
--- 1. CRIAR INTERFACE VISUAL NATIVA
+-- =======================================================
+-- CRIAÇÃO DA INTERFACE VISUAL (DESIGN AVANÇADO)
+-- =======================================================
 local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local Title = Instance.new("TextLabel")
-local Container = Instance.new("ScrollingFrame")
-local CloseButton = Instance.new("TextButton")
-
-ScreenGui.Name = "FruitHubPremium"
+ScreenGui.Name = "MegaHubBloxFruits"
 ScreenGui.Parent = playerGui
 ScreenGui.ResetOnSpawn = false
 
-MainFrame.Name = "MainFrame"
+local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MainFrame.Position = UDim2.new(0.3, 0, 0.25, 0)
-MainFrame.Size = UDim2.new(0, 320, 0, 420) -- Aumentado um pouco para caber a barra
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 420, 0, 360)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
-Title.Name = "Title"
-Title.Parent = MainFrame
-Title.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-Title.Size = UDim2.new(1, 0, 0, 45)
+local TopBar = Instance.new("Frame")
+TopBar.Parent = MainFrame
+TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+
+local Title = Instance.new("TextLabel")
+Title.Parent = TopBar
+Title.BackgroundTransparency = 1
+Title.Size = UDim2.new(0.8, 0, 1, 0)
 Title.Font = Enum.Font.SourceSansBold
-Title.Text = "FRUIT & EVENT AUTOMATION"
+Title.Text = "  PREMIUM MEGA HUB - TUDO-EM-UM"
 Title.TextColor3 = Color3.fromRGB(255, 170, 0)
-Title.TextSize = 18
+Title.TextSize = 16
+Title.TextXAlignment = Enum.TextXAlignment.Left
 
-Container.Name = "Container"
-Container.Parent = MainFrame
-Container.BackgroundTransparency = 1
-Container.Position = UDim2.new(0, 0, 0, 45)
-Container.Size = UDim2.new(1, 0, 1, -95)
-Container.CanvasSize = UDim2.new(0, 0, 1.3, 0)
-Container.ScrollBarThickness = 6
+-- Menu Lateral de Abas
+local Sidebar = Instance.new("Frame")
+Sidebar.Parent = MainFrame
+Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+Sidebar.Position = UDim2.new(0, 0, 0, 40)
+Sidebar.Size = UDim2.new(0, 120, 1, -40)
 
-local function criarBotaoMenu(texto, posicaoY, callback)
+-- Container de Conteúdo Principal
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Parent = MainFrame
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.Position = UDim2.new(0, 120, 0, 40)
+ContentContainer.Size = UDim2.new(1, -120, 1, -40)
+
+-- Criar as Páginas de Conteúdo (Scrolling)
+local function criarPagina()
+    local page = Instance.new("ScrollingFrame")
+    page.Parent = ContentContainer
+    page.BackgroundTransparency = 1
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.CanvasSize = UDim2.new(0, 0, 1.5, 0)
+    page.ScrollBarThickness = 4
+    page.Visible = false
+    return page
+end
+
+local PageFarm = criarPagina()
+local PageFruits = criarPagina()
+local PageConfig = criarPagina()
+
+-- Função de alternar Abas
+local function abrirAba(paginaAtiva)
+    PageFarm.Visible = false
+    PageFruits.Visible = false
+    PageConfig.Visible = false
+    paginaAtiva.Visible = true
+end
+
+-- Botões da Sidebar
+local function criarBotaoAba(texto, posIndex, pagina)
     local btn = Instance.new("TextButton")
-    btn.Parent = Container
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    btn.Position = UDim2.new(0.05, 0, 0, posicaoY)
+    btn.Parent = Sidebar
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    btn.Position = UDim2.new(0.05, 0, 0, (posIndex * 40) - 30)
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.Text = texto
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 13
+    btn.MouseButton1Click:Connect(function() abrirAba(pagina) end)
+end
+
+criarBotaoAba("⚔️ Auto Farm", 1, PageFarm)
+criarBotaoAba("🍎 Frutas", 2, PageFruits)
+criarBotaoAba("⚙️ Ajustes", 3, PageConfig)
+abrirAba(PageFarm) -- Abre na aba de Farm por padrão
+
+-- Função Auxiliar para Criar Componentes dentro das Páginas
+local function criarToggle(parent, texto, posY, callback)
+    local btn = Instance.new("TextButton")
+    btn.Parent = parent
+    btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    btn.Position = UDim2.new(0.05, 0, 0, posY)
+    btn.Size = UDim2.new(0.9, 0, 0, 38)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.Text = texto .. ": DESLIGADO"
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 13
+    
+    local ativo = false
+    btn.MouseButton1Click:Connect(function()
+        ativo = not ativo
+        if ativo then
+            btn.Text = texto .. ": LIGADO"
+            btn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+        else
+            btn.Text = texto .. ": DESLIGADO"
+            btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        end
+        callback(ativo)
+    end)
+end
+
+local function criarBotaoSimples(parent, texto, posY, callback)
+    local btn = Instance.new("TextButton")
+    btn.Parent = parent
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+    btn.Position = UDim2.new(0.05, 0, 0, posY)
     btn.Size = UDim2.new(0.9, 0, 0, 38)
     btn.Font = Enum.Font.SourceSansBold
     btn.Text = texto
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 14
+    btn.TextSize = 13
     btn.MouseButton1Click:Connect(callback)
-    return btn
 end
 
 -- =======================================================
--- 🎛️ ADICIONANDO A BARRINHA DE VELOCIDADE (SLIDER NATIVA)
+-- CONFIGURAÇÃO DOS COMPONENTES DAS ABAS
 -- =======================================================
-local SliderFrame = Instance.new("Frame")
-local SliderLabel = Instance.new("TextLabel")
-local SliderBar = Instance.new("Frame")
-local SliderButton = Instance.new("TextButton")
 
-SliderFrame.Name = "SliderFrame"
-SliderFrame.Parent = Container
-SliderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-SliderFrame.Position = UDim2.new(0.05, 0, 0, 15)
-SliderFrame.Size = UDim2.new(0.9, 0, 0, 50)
-
-SliderLabel.Name = "SliderLabel"
-SliderLabel.Parent = SliderFrame
-SliderLabel.BackgroundTransparency = 1
-SliderLabel.Size = UDim2.new(1, 0, 0, 25)
-SliderLabel.Font = Enum.Font.SourceSansBold
-SliderLabel.Text = "⚡ VELOCIDADE DO TWEEN: " .. _G.VelocidadeVoo
-SliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-SliderLabel.TextSize = 13
-
-SliderBar.Name = "SliderBar"
-SliderBar.Parent = SliderFrame
-SliderBar.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-SliderBar.Position = UDim2.new(0.05, 0, 0.6, 0)
-SliderBar.Size = UDim2.new(0.9, 0, 0, 8)
-
-SliderButton.Name = "SliderButton"
-SliderButton.Parent = SliderBar
-SliderButton.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
--- Define a posição inicial com base nos 150 padrão (metade do caminho entre 50 e 300)
-SliderButton.Position = UDim2.new(0.4, 0, -0.7, 0)
-SliderButton.Size = UDim2.new(0, 15, 0, 18)
-SliderButton.Text = ""
-
--- Lógica para arrastar o botão da barra com o mouse
-local arrastando = false
-SliderButton.MouseButton1Down:Connect(function() arrastando = true end)
-
-local mouse = player:GetMouse()
-mouse.Move:Connect(function()
-    if arrastando then
-        local posAbsolutaBarra = SliderBar.AbsolutePosition.X
-        local tamAbsolutoBarra = SliderBar.AbsoluteSize.X
-        local posMouseX = mouse.X
-        
-        -- Calcula o percentual de onde o mouse está na barra (de 0 a 1)
-        local percentual = math.clamp((posMouseX - posAbsolutaBarra) / tamAbsolutoBarra, 0, 1)
-        SliderButton.Position = UDim2.new(percentual, -7, -0.7, 0)
-        
-        -- Converte o percentual para valores de velocidade entre 50 e 300
-        local minVel = 50
-        local maxVel = 300
-        _G.VelocidadeVoo = math.floor(minVel + (percentual * (maxVel - minVel)))
-        SliderLabel.Text = "⚡ VELOCIDADE DO TWEEN: " .. _G.VelocidadeVoo
-    end
-end)
-
-game:GetService("UserInputService").InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        arrastando = false
-    end
-end)
-
--- Ajustando a posição vertical (Y) dos outros botões abaixo para dar espaço à barra
-criarBotaoMenu("🎁 GIRAR FRUTA ALEATÓRIA (Cousin)", 75, function()
-    local gff = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_")
-    dispararRemote("Function", gff, "Cousin", "BuyFruit")
-end)
-
-criarBotaoMenu("🎉 GIRAR ROCO/FRUTA DO NOVO EVENTO", 125, function()
-    local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
-    local eventRemote = remotes:FindFirstChild("EventGacha") or remotes:FindFirstChild("CommF_")
-    if eventRemote and eventRemote.Name == "CommF_" then
-        dispararRemote("Function", eventRemote, "EventNPC", "Roll")
-    elseif eventRemote then
-        dispararRemote("Function", eventRemote, "Roll")
-    end
-end)
-
-local StoreToggle = criarBotaoMenu("📦 AUTO STORE FRUITS: DESLIGADO", 175, function() end)
-StoreToggle.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-StoreToggle.MouseButton1Click:Connect(function()
-    _G.AutoStoreFruits = not _G.AutoStoreFruits
-    if _G.AutoStoreFruits then
-        StoreToggle.Text = "📦 AUTO STORE FRUITS: LIGADO"
-        StoreToggle.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+-- --- ABA 1: AUTO FARM ---
+criarToggle(PageFarm, "Auto Ataque / Click", 15, function(state)
+    _G.AutoAttack = state
+    if state then
         task.spawn(function()
-            while _G.AutoStoreFruits do
+            while _G.AutoAttack do
                 local character = player.Character
                 if character then
-                    local frutaNaMao = character:FindFirstChildOfClass("Tool")
-                    if frutaNaMao and frutaNaMao.Name:match("Fruit") then
-                        local storeRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_")
-                        dispararRemote("Function", storeRemote, "StoreFruit", frutaNaMao.Name, frutaNaMao)
-                    end
+                    local tool = character:FindFirstChildOfClass("Tool")
+                    if tool then tool:Activate() end
                 end
-                task.wait(1.5)
+                task.wait(0.1)
             end
         end)
-    else
-        StoreToggle.Text = "📦 AUTO STORE FRUITS: DESLIGADO"
-        StoreToggle.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
     end
 end)
 
-local SniperToggle = criarBotaoMenu("🍎 FRUIT SNIPER (MAPA): DESLIGADO", 225, function() end)
-SniperToggle.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-SniperToggle.MouseButton1Click:Connect(function()
-    _G.AutoFruitSniper = not _G.AutoFruitSniper
-    if _G.AutoFruitSniper then
-        SniperToggle.Text = "🍎 FRUIT SNIPER (MAPA): LIGADO"
-        SniperToggle.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+criarToggle(PageFarm, "Auto Farm Level (Base)", 65, function(state)
+    _G.AutoFarmLevel = state
+    if state then
         task.spawn(function()
-            while _G.AutoFruitSniper do
+            while _G.AutoFarmLevel do
+                -- Lógica Base de detecção de inimigos próximos
                 local character = player.Character
                 if character and character:FindFirstChild("HumanoidRootPart") then
-                    for _, objeto in pairs(workspace:GetChildren()) do
-                        if not _G.AutoFruitSniper then break end
-                        if objeto:IsA("Model") and (objeto.Name:match("Fruit") or objeto:FindFirstChild("Handle")) then
-                            local handle = objeto:FindFirstChild("Handle") or objeto:FindFirstChildOfClass("BasePart")
-                            if handle then
-                                voarPara(handle.CFrame)
-                                task.wait(0.5)
-                            end
+                    for _, npc in pairs(workspace.Enemies:GetChildren()) do
+                        if not _G.AutoFarmLevel then break end
+                        if npc:FindFirstChild("HumanoidRootPart") and npc.Humanoid.Health > 0 then
+                            -- Voa até o NPC e fica em cima dele atacando
+                            _G.AutoAttack = true
+                            voarPara(npc.HumanoidRootPart.CFrame * CFrame.new(0, 6, 0))
+                            task.wait(0.5)
                         end
                     end
                 end
@@ -255,3 +241,39 @@ SniperToggle.MouseButton1Click:Connect(function()
             end
         end)
     else
+        _G.AutoAttack = false
+    end
+end)
+
+criarToggle(PageFarm, "Auto Chest Farm (Dinheiro)", 115, function(state)
+    _G.AutoChest = state
+    if state then
+        task.spawn(function()
+            while _G.AutoChest do
+                local character = player.Character
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    for _, objeto in pairs(workspace:GetDescendants()) do
+                        if not _G.AutoChest then break end
+                        if objeto:IsA("TouchTransmitter") and objeto.Parent and objeto.Parent.Name:match("Chest") then
+                            local bauPart = objeto.Parent
+                            if bauPart:IsA("BasePart") then
+                                voarPara(bauPart.CFrame)
+                                task.wait(0.4)
+                            end
+                        end
+                    end
+                end
+                task.wait(1)
+            end
+        end)
+    end
+end)
+
+-- --- ABA 2: FRUTAS ---
+criarBotaoSimples(PageFruits, "🎁 Girar Fruta (Cousin)", 15, function()
+    local gff = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_")
+    dispararRemote("Function", gff, "Cousin", "BuyFruit")
+end)
+
+criarBotaoSimples(PageFruits, "🎉 Girar Novo Evento (Gacha)", 65, function()
+    local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
