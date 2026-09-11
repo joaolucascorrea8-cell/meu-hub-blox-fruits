@@ -1,4 +1,4 @@
--- Espera o jogo carregar completamente antes de abrir o menu
+-- Espera o jogo carregar completamente
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
 -- Inicialização das Variáveis Globais de Controle
@@ -8,51 +8,71 @@ _G.AutoAttack = false
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- Carrega a Kavo Library Oficial via loadstring (Layout profissional)
-local KavoLibrary = loadstring(game:HttpGet("https://githubusercontent.com"))()
--- Cria a Janela Principal (Tema "Midnight" Escuro)
-local Window = KavoLibrary.CreateLib("Meu Script Hub", "Midnight")
+-- Carrega a Orion Library Oficial via loadstring (Mais estável e moderna)
+local OrionLib = loadstring(game:HttpGet(('https://githubusercontent.com')))()
+
+-- Cria a Janela Principal do Hub
+local Window = OrionLib:MakeWindow({
+    Name = "Meu Script Hub (Orion Edition)", 
+    HidePremium = false, 
+    SaveConfig = true, 
+    ConfigFolder = "OrionBloxFruits"
+})
 
 -- =======================================================
 -- ABA 1: AUTO FARM
 -- =======================================================
-local FarmTab = Window:NewTab("Auto Farm")
-local FarmSection = FarmTab:NewSection("Configurações de Farm")
+local FarmTab = Window:MakeTab({
+    Name = "Auto Farm",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
 
 -- Toggle para ativar/desativar o Ataque Automático
-FarmSection:NewToggle("Auto Ataque", "Faz o seu personagem clicar infinitamente", function(state)
-    _G.AutoAttack = state
-    if state then
-        task.spawn(function()
-            while _G.AutoAttack do
-                local character = player.Character
-                if character then
-                    local tool = character:FindFirstChildOfClass("Tool")
-                    if tool then
-                        tool:Activate()
+FarmTab:AddToggle({
+    Name = "Auto Ataque",
+    Default = false,
+    Callback = function(state)
+        _G.AutoAttack = state
+        if state then
+            task.spawn(function()
+                while _G.AutoAttack do
+                    local character = player.Character
+                    if character then
+                        local tool = character:FindFirstChildOfClass("Tool")
+                        if tool then
+                            tool:Activate()
+                        end
                     end
+                    task.wait(0.1) -- Pausa de segurança
                 end
-                task.wait(0.1) -- Pausa de segurança para não travar o executor
-            end
-        end)
-    end
-end)
+            end)
+        end
+    end    
+})
 
 -- Toggle Base para o Auto Farm de Level
-FarmSection:NewToggle("Auto Farm de Level", "Ativa o farm automatizado de NPCs", function(state)
-    _G.AutoFarmLevel = state
-    if state then
-        print("Auto Farm de Level Ativado!")
-    else
-        print("Auto Farm de Level Desativado!")
-    end
-end)
+FarmTab:AddToggle({
+    Name = "Auto Farm de Level",
+    Default = false,
+    Callback = function(state)
+        _G.AutoFarmLevel = state
+        if state then
+            print("Auto Farm de Level Ativado!")
+        else
+            print("Auto Farm de Level Desativado!")
+        end
+    end    
+})
 
 -- =======================================================
--- ABA 2: TELEPORTES (Lógica por Coordenadas CFrame)
+-- ABA 2: TELEPORTES
 -- =======================================================
-local TeleportTab = Window:NewTab("Teleportes")
-local TeleportSection = TeleportTab:NewSection("Viajar Entre os Mares")
+local TeleportTab = Window:MakeTab({
+    Name = "Teleportes",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
 
 local function teleportarPara(cframeAlvo)
     local character = player.Character
@@ -61,30 +81,46 @@ local function teleportarPara(cframeAlvo)
     end
 end
 
--- CORREÇÃO AQUI: Fechamento correto das funções anônimas da Kavo Library
-TeleportSection:NewButton("Primeiro Mar (Mundo Inicial)", "Te move para as coordenadas do Primeiro Mar", function()
-    teleportarPara(CFrame.new(994, 15, -1412)) 
-end)
+TeleportTab:AddButton({
+    Name = "Primeiro Mar (Mundo Inicial)",
+    Callback = function()
+        teleportarPara(CFrame.new(994, 15, -1412))
+    end
+})
 
-TeleportSection:NewButton("Segundo Mar", "Te move para as coordenadas do Segundo Mar", function()
-    teleportarPara(CFrame.new(-25, 15, -10)) 
-end)
+TeleportTab:AddButton({
+    Name = "Segundo Mar",
+    Callback = function()
+        teleportarPara(CFrame.new(-25, 15, -10))
+    end
+})
 
-TeleportSection:NewButton("Terceiro Mar", "Te move para as coordenadas do Terceiro Mar", function()
-    teleportarPara(CFrame.new(500, 15, 500)) 
-end)
+TeleportTab:AddButton({
+    Name = "Terceiro Mar",
+    Callback = function()
+        teleportarPara(CFrame.new(500, 15, 500))
+    end
+})
 
 -- =======================================================
--- ABA 3: STATUS & SISTEMA
+-- ABA 3: STATUS
 -- =======================================================
-local StatusTab = Window:NewTab("Status")
-local StatusSection = StatusTab:NewSection("Informações do Usuário")
+local StatusTab = Window:MakeTab({
+    Name = "Status",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
 
--- Mostra o nome do jogador atualizado na interface
-StatusSection:NewLabel("Jogador Conectado: " .. player.Name)
-StatusSection:NewLabel("ID do Usuário: " .. player.UserId)
+StatusTab:AddLabel("Jogador: " .. player.Name)
+StatusTab:AddLabel("ID: " .. player.UserId)
 
--- Botão para fechar o menu completamente se precisar esconder a tela
-StatusSection:NewButton("Fechar Hub", "Destrói a interface gráfica", function()
-    KavoLibrary:DestroyGui()
-end)
+-- Botão para fechar o menu
+StatusTab:AddButton({
+    Name = "Fechar Hub",
+    Callback = function()
+        OrionLib:Destroy()
+    end
+})
+
+-- Inicializa a interface gráfica na tela
+OrionLib:Init()
