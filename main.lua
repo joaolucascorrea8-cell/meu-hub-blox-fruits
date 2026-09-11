@@ -1,13 +1,17 @@
--- Linha 1: Espera o jogo carregar completamente antes de iniciar
+-- Espera o jogo carregar completamente antes de rodar
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
--- Linhas 2 a 10: Definição das Variáveis Globais de Controle e Serviços
+-- =======================================================
+-- MEMÓRIA DO KAITUN: ESTADO GLOBAL DE AUTOMAÇÕES
+-- =======================================================
+_G.FastAttack = false
 _G.AutoAttack = false
 _G.AutoFarmLevel = false
 _G.AutoChest = false
 _G.AutoFruitSniper = false
 _G.AutoStoreFruits = false
-_G.VelocidadeVoo = 150
+_G.VelocidadeVoo = 160 -- Velocidade balanceada indetectável
+_G.BlackScreen = false
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -15,13 +19,13 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Remove Hub duplicado na tela para não travar
-if playerGui:FindFirstChild("MegaHubBloxFruits") then
-    playerGui.MegaHubBloxFruits:Destroy()
+-- Evita abrir menus duplicados e causar crash no executor
+if playerGui:FindFirstChild("MegaKaitunHub") then
+    playerGui.MegaKaitunHub:Destroy()
 end
 
 -- =======================================================
--- FUNÇÕES DE MOVIMENTAÇÃO E SEGURANÇA (TWEEN + NOCLIP)
+-- MOTORES DE SEGURANÇA E MOVIMENTAÇÃO (TWEEN + NOCLIP)
 -- =======================================================
 local function voarPara(cframeAlvo)
     local character = player.Character
@@ -45,7 +49,7 @@ local function voarPara(cframeAlvo)
     end
 end
 
--- Sistema Ativo de Noclip Permanente
+-- Mecânica de Noclip dos Kaituns: Remove colisões para atravessar o mapa sem bugar
 task.spawn(function()
     RunService.Stepped:Connect(function()
         if _G.AutoChest or _G.AutoFruitSniper or _G.AutoFarmLevel then
@@ -61,38 +65,35 @@ task.spawn(function()
     end)
 end)
 
--- Função corrigida de disparo de Remotes (Sem erros de sintaxe)
+-- Sistema de Disparo de Comandos Seguros para os Servidores do Blox Fruits
 local function dispararRemote(tipo, caminho, ...)
     local args = {...}
     local sucesso, resultado = pcall(function()
-        if tipo == "Function" then 
-            return caminho:InvokeServer(unpack(args))
-        elseif tipo == "Event" then 
-            caminho:FireServer(unpack(args)) 
-        end
+        if tipo == "Function" then return caminho:InvokeServer(unpack(args))
+        elseif tipo == "Event" then caminho:FireServer(unpack(args)) end
     end)
     return sucesso, resultado
 end
 
 -- =======================================================
--- CRIAÇÃO DA INTERFACE VISUAL NATIVA (DESIGN DO MEGA HUB)
+-- CONSTRUÇÃO DA INTERFACE VISUAL NATIVA DO HUB
 -- =======================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MegaHubBloxFruits"
+ScreenGui.Name = "MegaKaitunHub"
 ScreenGui.Parent = playerGui
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
 MainFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
-MainFrame.Size = UDim2.new(0, 420, 0, 360)
+MainFrame.Size = UDim2.new(0, 440, 0, 380)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
 local TopBar = Instance.new("Frame")
 TopBar.Parent = MainFrame
-TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TopBar.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
 TopBar.Size = UDim2.new(1, 0, 0, 40)
 
 local Title = Instance.new("TextLabel")
@@ -100,29 +101,46 @@ Title.Parent = TopBar
 Title.BackgroundTransparency = 1
 Title.Size = UDim2.new(0.8, 0, 1, 0)
 Title.Font = Enum.Font.SourceSansBold
-Title.Text = "  PREMIUM MEGA HUB - TUDO-EM-UM"
+Title.Text = "  ⚡ KAITUN SUPREME HUB - TUDO-EM-UM"
 Title.TextColor3 = Color3.fromRGB(255, 170, 0)
-Title.TextSize = 16
+Title.TextSize = 15
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
 local Sidebar = Instance.new("Frame")
 Sidebar.Parent = MainFrame
-Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+Sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 Sidebar.Position = UDim2.new(0, 0, 0, 40)
-Sidebar.Size = UDim2.new(0, 120, 1, -40)
+Sidebar.Size = UDim2.new(0, 130, 1, -40)
 
 local ContentContainer = Instance.new("Frame")
 ContentContainer.Parent = MainFrame
 ContentContainer.BackgroundTransparency = 1
-ContentContainer.Position = UDim2.new(0, 120, 0, 40)
-ContentContainer.Size = UDim2.new(1, -120, 1, -40)
+ContentContainer.Position = UDim2.new(0, 130, 0, 40)
+ContentContainer.Size = UDim2.new(1, -130, 1, -40)
+
+-- Tela Preta Protetora (Reduz esforço da sua GPU ao farmar de madrugada)
+local BlackScreenFrame = Instance.new("Frame")
+BlackScreenFrame.Parent = ScreenGui
+BlackScreenFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+BlackScreenFrame.Size = UDim2.new(1, 0, 1, 0)
+BlackScreenFrame.Visible = false
+
+local BlackScreenLabel = Instance.new("TextLabel")
+BlackScreenLabel.Parent = BlackScreenFrame
+BlackScreenLabel.BackgroundTransparency = 1
+BlackScreenLabel.Position = UDim2.new(0.4, 0, 0.45, 0)
+BlackScreenLabel.Size = UDim2.new(0, 200, 0, 50)
+BlackScreenLabel.Font = Enum.Font.SourceSansBold
+BlackScreenLabel.Text = "MODO ECONOMIA ATIVO (KAITUN RUNNING)\nClique em qualquer lugar para desativar"
+BlackScreenLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+BlackScreenLabel.TextSize = 16
 
 local function criarPagina()
     local page = Instance.new("ScrollingFrame")
     page.Parent = ContentContainer
     page.BackgroundTransparency = 1
     page.Size = UDim2.new(1, 0, 1, 0)
-    page.CanvasSize = UDim2.new(0, 0, 1.5, 0)
+    page.CanvasSize = UDim2.new(0, 0, 1.6, 0)
     page.ScrollBarThickness = 4
     page.Visible = false
     return page
@@ -130,21 +148,20 @@ end
 
 local PageFarm = criarPagina()
 local PageFruits = criarPagina()
+local PageShop = criarPagina()
 local PageConfig = criarPagina()
 
 local function abrirAba(paginaAtiva)
-    PageFarm.Visible = false
-    PageFruits.Visible = false
-    PageConfig.Visible = false
+    PageFarm.Visible = false; PageFruits.Visible = false; PageShop.Visible = false; PageConfig.Visible = false
     paginaAtiva.Visible = true
 end
 
 local function criarBotaoAba(texto, posIndex, pagina)
     local btn = Instance.new("TextButton")
     btn.Parent = Sidebar
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    btn.Position = UDim2.new(0.05, 0, 0, (posIndex * 40) - 30)
-    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+    btn.Position = UDim2.new(0.05, 0, 0, (posIndex * 42) - 32)
+    btn.Size = UDim2.new(0.9, 0, 0, 36)
     btn.Font = Enum.Font.SourceSansBold
     btn.Text = texto
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -153,31 +170,27 @@ local function criarBotaoAba(texto, posIndex, pagina)
 end
 
 criarBotaoAba("⚔️ Auto Farm", 1, PageFarm)
-criarBotaoAba("🍎 Frutas", 2, PageFruits)
-criarBotaoAba("⚙️ Ajustes", 3, PageConfig)
+criarBotaoAba("🍎 Auto Fruit", 2, PageFruits)
+criarBotaoAba("🛒 Auto Shop", 3, PageShop)
+criarBotaoAba("⚙️ Otimização", 4, PageConfig)
 abrirAba(PageFarm)
 
 local function criarToggle(parent, texto, posY, callback)
     local btn = Instance.new("TextButton")
     btn.Parent = parent
-    btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    btn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
     btn.Position = UDim2.new(0.05, 0, 0, posY)
-    btn.Size = UDim2.new(0.9, 0, 0, 38)
+    btn.Size = UDim2.new(0.9, 0, 0, 36)
     btn.Font = Enum.Font.SourceSansBold
     btn.Text = texto .. ": DESLIGADO"
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 13
+    btn.TextSize = 12
     
     local ativo = false
     btn.MouseButton1Click:Connect(function()
         ativo = not ativo
-        if ativo then
-            btn.Text = texto .. ": LIGADO"
-            btn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-        else
-            btn.Text = texto .. ": DESLIGADO"
-            btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        end
+        btn.Text = ativo and (texto .. ": LIGADO") or (texto .. ": DESLIGADO")
+        btn.BackgroundColor3 = ativo and Color3.fromRGB(50, 140, 50) or Color3.fromRGB(180, 50, 50)
         callback(ativo)
     end)
 end
@@ -185,38 +198,43 @@ end
 local function criarBotaoSimples(parent, texto, posY, callback)
     local btn = Instance.new("TextButton")
     btn.Parent = parent
-    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
     btn.Position = UDim2.new(0.05, 0, 0, posY)
-    btn.Size = UDim2.new(0.9, 0, 0, 38)
+    btn.Size = UDim2.new(0.9, 0, 0, 36)
     btn.Font = Enum.Font.SourceSansBold
     btn.Text = texto
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 13
+    btn.TextSize = 12
     btn.MouseButton1Click:Connect(callback)
 end
 
 -- =======================================================
--- CONFIGURAÇÃO DOS COMPONENTES INTERNOS DAS ABAS
+-- ABA 1: CONFIGURAÇÃO DE COMBATE E AUTO FARM
 -- =======================================================
-
--- --- ABA 1: AUTO FARM ---
-criarToggle(PageFarm, "Auto Ataque / Click", 15, function(state)
-    _G.AutoAttack = state
+criarToggle(PageFarm, "Fast Attack (Ataque M1 Rápido)", 15, function(state)
+    _G.FastAttack = state
     if state then
         task.spawn(function()
-            while _G.AutoAttack do
+            while _G.FastAttack do
                 local character = player.Character
                 if character then
                     local tool = character:FindFirstChildOfClass("Tool")
-                    if tool then tool:Activate() end
+                    if tool then
+                        -- Envia comandos de ativação ultra veloz simulando o Banana Cat
+                        tool:Activate()
+                        pcall(function()
+                            game:GetService("VirtualUser"):CaptureController()
+                            game:GetService("VirtualUser"):Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                        end)
+                    end
                 end
-                task.wait(0.1)
+                task.wait(0.01) -- Velocidade limite de pacotes sem travar
             end
         end)
     end
 end)
 
-criarToggle(PageFarm, "Auto Farm Level (Base)", 65, function(state)
+criarToggle(PageFarm, "Auto Farm Level (Voo + Target)", 65, function(state)
     _G.AutoFarmLevel = state
     if state then
         task.spawn(function()
@@ -226,57 +244,24 @@ criarToggle(PageFarm, "Auto Farm Level (Base)", 65, function(state)
                     for _, npc in pairs(workspace.Enemies:GetChildren()) do
                         if not _G.AutoFarmLevel then break end
                         if npc:FindFirstChild("HumanoidRootPart") and npc.Humanoid.Health > 0 then
-                            _G.AutoAttack = true
+                            _G.FastAttack = true
                             voarPara(npc.HumanoidRootPart.CFrame * CFrame.new(0, 6, 0))
-                            task.wait(0.5)
+                            task.wait(0.3)
                         end
                     end
                 end
-                task.wait(1)
+                task.wait(0.5)
             end
         end)
     else
-        _G.AutoAttack = false
+        _G.FastAttack = false
     end
 end)
 
-criarToggle(PageFarm, "Auto Chest Farm (Dinheiro)", 115, function(state)
+criarToggle(PageFarm, "Auto Chest Farm (Coletar Baús)", 115, function(state)
     _G.AutoChest = state
     if state then
         task.spawn(function()
             while _G.AutoChest do
                 local character = player.Character
                 if character and character:FindFirstChild("HumanoidRootPart") then
-                    for _, objeto in pairs(workspace:GetDescendants()) do
-                        if not _G.AutoChest then break end
-                        if objeto:IsA("TouchTransmitter") and objeto.Parent and objeto.Parent.Name:match("Chest") then
-                            local bauPart = objeto.Parent
-                            if bauPart:IsA("BasePart") then
-                                voarPara(bauPart.CFrame)
-                                task.wait(0.4)
-                            end
-                        end
-                    end
-                end
-                task.wait(1)
-            end
-        end)
-    end
-end)
-
--- --- ABA 2: FRUTAS ---
-criarBotaoSimples(PageFruits, "🎁 Girar Fruta (Cousin)", 15, function()
-    local gff = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_")
-    dispararRemote("Function", gff, "Cousin", "BuyFruit")
-end)
-
-criarBotaoSimples(PageFruits, "🎉 Girar Novo Evento (Gacha)", 65, function()
-    local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
-    local eventRemote = remotes:FindFirstChild("MagnetGacha") or remotes:FindFirstChild("EventGacha") or remotes:FindFirstChild("CommF_")
-    if eventRemote and eventRemote.Name == "CommF_" then
-        dispararRemote("Function", eventRemote, "EventNPC", "Roll")
-    elseif eventRemote then
-        dispararRemote("Function", eventRemote, "Roll")
-    end
-end)
-
