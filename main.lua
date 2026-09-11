@@ -1,4 +1,4 @@
--- Espera o jogo carregar
+-- Espera o jogo carregar completamente
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
 -- Variáveis de Controle Global
@@ -7,8 +7,14 @@ _G.AutoFarmLevel = false
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui") -- CORREÇÃO: Usando a pasta correta do jogador
 
--- 1. CRIAR A INTERFACE VISUAL DO ZERO (NATIVA)
+-- Deleta o Hub anterior se ele já estiver aberto para não acumular na tela
+if playerGui:FindFirstChild("HubNativo") then
+    playerGui.HubNativo:Destroy()
+end
+
+-- 1. CRIAR A INTERFACE VISUAL NATIVA
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
@@ -19,7 +25,7 @@ local CloseButton = Instance.new("TextButton")
 
 -- Configurações da Janela Principal
 ScreenGui.Name = "HubNativo"
-ScreenGui.Parent = player:WaitForChild("CoreGui") or game:GetService("CoreGui") -- Tenta CoreGui ou PlayerGui
+ScreenGui.Parent = playerGui
 ScreenGui.ResetOnSpawn = false
 
 MainFrame.Name = "MainFrame"
@@ -28,7 +34,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35) -- Azul escuro/Midnight
 MainFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
 MainFrame.Size = UDim2.new(0, 250, 0, 300)
 MainFrame.Active = true
-MainFrame.Draggable = true -- Permite arrastar a janela pela tela com o mouse
+MainFrame.Draggable = true -- Permite mover com o mouse
 
 -- Título do Menu
 Title.Name = "Title"
@@ -43,7 +49,7 @@ Title.TextSize = 18
 -- Botão 1: Auto Ataque
 AttackToggle.Name = "AttackToggle"
 AttackToggle.Parent = MainFrame
-AttackToggle.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Vermelho (Desativado)
+AttackToggle.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Vermelho
 AttackToggle.Position = UDim2.new(0.05, 0, 0.2, 0)
 AttackToggle.Size = UDim2.new(0.9, 0, 0, 40)
 AttackToggle.Font = Enum.Font.SourceSans
@@ -57,7 +63,6 @@ AttackToggle.MouseButton1Click:Connect(function()
         AttackToggle.Text = "Auto Ataque: LIGADO"
         AttackToggle.BackgroundColor3 = Color3.fromRGB(50, 150, 50) -- Verde
         
-        -- Loop de ataque em segundo plano
         task.spawn(function()
             while _G.AutoAttack do
                 local character = player.Character
@@ -74,7 +79,7 @@ AttackToggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- Botão 2: Auto Farm Level (Base)
+-- Botão 2: Auto Farm Level
 FarmToggle.Name = "FarmToggle"
 FarmToggle.Parent = MainFrame
 FarmToggle.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
@@ -90,7 +95,6 @@ FarmToggle.MouseButton1Click:Connect(function()
     if _G.AutoFarmLevel then
         FarmToggle.Text = "Auto Farm: LIGADO"
         FarmToggle.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-        print("Lógica de farm ativada")
     else
         FarmToggle.Text = "Auto Farm: DESLIGADO"
         FarmToggle.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
@@ -111,7 +115,6 @@ TeleportButton.TextSize = 16
 TeleportButton.MouseButton1Click:Connect(function()
     local character = player.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
-        -- Coordenadas aproximadas do Café no Segundo Mar
         character.HumanoidRootPart.CFrame = CFrame.new(-25, 15, -10)
     end
 end)
