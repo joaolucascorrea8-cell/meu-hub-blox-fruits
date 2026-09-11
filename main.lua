@@ -1,15 +1,13 @@
--- Espera o jogo carregar completamente
+-- Linha 1: Espera o jogo carregar completamente antes de iniciar
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
--- =======================================================
--- CONFIGURAÇÕES E ESTADO GLOBAL
--- =======================================================
+-- Linhas 2 a 10: Definição das Variáveis Globais de Controle e Serviços
 _G.AutoAttack = false
 _G.AutoFarmLevel = false
 _G.AutoChest = false
 _G.AutoFruitSniper = false
 _G.AutoStoreFruits = false
-_G.VelocidadeVoo = 150 -- Controlado pela barrinha
+_G.VelocidadeVoo = 150
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -17,7 +15,7 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Remove Hub duplicado
+-- Remove Hub duplicado na tela para não travar
 if playerGui:FindFirstChild("MegaHubBloxFruits") then
     playerGui.MegaHubBloxFruits:Destroy()
 end
@@ -47,7 +45,7 @@ local function voarPara(cframeAlvo)
     end
 end
 
--- Ativa Noclip se o Farm de Baús ou de Frutas estiver ligado
+-- Sistema Ativo de Noclip Permanente
 task.spawn(function()
     RunService.Stepped:Connect(function()
         if _G.AutoChest or _G.AutoFruitSniper or _G.AutoFarmLevel then
@@ -63,16 +61,21 @@ task.spawn(function()
     end)
 end)
 
+-- Função corrigida de disparo de Remotes (Sem erros de sintaxe)
 local function dispararRemote(tipo, caminho, ...)
-    local sucesso, resultado = pcall(function(...)
-        if tipo == "Function" then return caminho:InvokeServer(...)
-        elseif tipo == "Event" then caminho:FireServer(...) end
-    end, ...)
+    local args = {...}
+    local sucesso, resultado = pcall(function()
+        if tipo == "Function" then 
+            return caminho:InvokeServer(unpack(args))
+        elseif tipo == "Event" then 
+            caminho:FireServer(unpack(args)) 
+        end
+    end)
     return sucesso, resultado
 end
 
 -- =======================================================
--- CRIAÇÃO DA INTERFACE VISUAL (DESIGN AVANÇADO)
+-- CRIAÇÃO DA INTERFACE VISUAL NATIVA (DESIGN DO MEGA HUB)
 -- =======================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "MegaHubBloxFruits"
@@ -102,21 +105,18 @@ Title.TextColor3 = Color3.fromRGB(255, 170, 0)
 Title.TextSize = 16
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- Menu Lateral de Abas
 local Sidebar = Instance.new("Frame")
 Sidebar.Parent = MainFrame
 Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 Sidebar.Position = UDim2.new(0, 0, 0, 40)
 Sidebar.Size = UDim2.new(0, 120, 1, -40)
 
--- Container de Conteúdo Principal
 local ContentContainer = Instance.new("Frame")
 ContentContainer.Parent = MainFrame
 ContentContainer.BackgroundTransparency = 1
 ContentContainer.Position = UDim2.new(0, 120, 0, 40)
 ContentContainer.Size = UDim2.new(1, -120, 1, -40)
 
--- Criar as Páginas de Conteúdo (Scrolling)
 local function criarPagina()
     local page = Instance.new("ScrollingFrame")
     page.Parent = ContentContainer
@@ -132,7 +132,6 @@ local PageFarm = criarPagina()
 local PageFruits = criarPagina()
 local PageConfig = criarPagina()
 
--- Função de alternar Abas
 local function abrirAba(paginaAtiva)
     PageFarm.Visible = false
     PageFruits.Visible = false
@@ -140,7 +139,6 @@ local function abrirAba(paginaAtiva)
     paginaAtiva.Visible = true
 end
 
--- Botões da Sidebar
 local function criarBotaoAba(texto, posIndex, pagina)
     local btn = Instance.new("TextButton")
     btn.Parent = Sidebar
@@ -157,9 +155,8 @@ end
 criarBotaoAba("⚔️ Auto Farm", 1, PageFarm)
 criarBotaoAba("🍎 Frutas", 2, PageFruits)
 criarBotaoAba("⚙️ Ajustes", 3, PageConfig)
-abrirAba(PageFarm) -- Abre na aba de Farm por padrão
+abrirAba(PageFarm)
 
--- Função Auxiliar para Criar Componentes dentro das Páginas
 local function criarToggle(parent, texto, posY, callback)
     local btn = Instance.new("TextButton")
     btn.Parent = parent
@@ -199,7 +196,7 @@ local function criarBotaoSimples(parent, texto, posY, callback)
 end
 
 -- =======================================================
--- CONFIGURAÇÃO DOS COMPONENTES DAS ABAS
+-- CONFIGURAÇÃO DOS COMPONENTES INTERNOS DAS ABAS
 -- =======================================================
 
 -- --- ABA 1: AUTO FARM ---
@@ -224,13 +221,11 @@ criarToggle(PageFarm, "Auto Farm Level (Base)", 65, function(state)
     if state then
         task.spawn(function()
             while _G.AutoFarmLevel do
-                -- Lógica Base de detecção de inimigos próximos
                 local character = player.Character
                 if character and character:FindFirstChild("HumanoidRootPart") then
                     for _, npc in pairs(workspace.Enemies:GetChildren()) do
                         if not _G.AutoFarmLevel then break end
                         if npc:FindFirstChild("HumanoidRootPart") and npc.Humanoid.Health > 0 then
-                            -- Voa até o NPC e fica em cima dele atacando
                             _G.AutoAttack = true
                             voarPara(npc.HumanoidRootPart.CFrame * CFrame.new(0, 6, 0))
                             task.wait(0.5)
@@ -277,3 +272,11 @@ end)
 
 criarBotaoSimples(PageFruits, "🎉 Girar Novo Evento (Gacha)", 65, function()
     local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
+    local eventRemote = remotes:FindFirstChild("MagnetGacha") or remotes:FindFirstChild("EventGacha") or remotes:FindFirstChild("CommF_")
+    if eventRemote and eventRemote.Name == "CommF_" then
+        dispararRemote("Function", eventRemote, "EventNPC", "Roll")
+    elseif eventRemote then
+        dispararRemote("Function", eventRemote, "Roll")
+    end
+end)
+
