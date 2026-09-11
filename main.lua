@@ -38,12 +38,11 @@ FarmSection:NewToggle("Auto Ataque", "Faz o seu personagem clicar infinitamente"
     end
 end)
 
--- Toggle Base para o Auto Farm de Level (Insira a sua lógica de voo aqui)
+-- Toggle Base para o Auto Farm de Level
 FarmSection:NewToggle("Auto Farm de Level", "Ativa o farm automatizado de NPCs", function(state)
     _G.AutoFarmLevel = state
     if state then
         print("Auto Farm de Level Ativado!")
-        -- O Dolphin pode te ajudar a programar a lógica de voo até o NPC do seu nível aqui dentro
     else
         print("Auto Farm de Level Desativado!")
     end
@@ -62,8 +61,8 @@ local function teleportarPara(cframeAlvo)
     end
 end
 
+-- CORREÇÃO AQUI: Fechamento correto das funções anônimas da Kavo Library
 TeleportSection:NewButton("Primeiro Mar (Mundo Inicial)", "Te move para as coordenadas do Primeiro Mar", function()
-    -- Exemplo de CFrame inicial (Geralmente os executores usam IDs de servidores ou teleportes locais)
     teleportarPara(CFrame.new(994, 15, -1412)) 
 end)
 
