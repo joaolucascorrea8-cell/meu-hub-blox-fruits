@@ -3,15 +3,46 @@ repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
 
 -- Variáveis de Controle Global
 _G.AutoAttack = false
-_G.AutoChest = false -- Nova variável para o controle dos baús
+_G.AutoChest = false
 
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Deleta o Hub anterior se ele já estiver aberto para não acumular na tela
+-- Configuração da Velocidade do Voo (100 a 150 é o limite seguro para não dar lag ou ban)
+local VelocidadeVoo = 120 
+
+-- Deleta o Hub anterior se ele já estiver aberto
 if playerGui:FindFirstChild("HubNativo") then
     playerGui.HubNativo:Destroy()
+end
+
+-- Função Otimizada de Movimentação Suave (Tween)
+local function voarPara(cframeAlvo)
+    local character = player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local hrp = character.HumanoidRootPart
+        
+        -- Calcula a distância exata para ajustar o tempo do voo automaticamente
+        local distancia = (hrp.Position - cframeAlvo.Position).Magnitude
+        local duracaoVoo = distancia / VelocidadeVoo
+        
+        -- Cria o movimento linear suave
+        local tweenInfo = TweenInfo.new(duracaoVoo, Enum.EasingStyle.Linear)
+        local tween = TweenService:Create(hrp, tweenInfo, {CFrame = cframeAlvo})
+        
+        -- Desativa a gravidade temporariamente para o personagem não cair enquanto voa
+        local bV = Instance.new("BodyVelocity")
+        bV.Velocity = Vector3.new(0, 0, 0)
+        bV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        bV.Parent = hrp
+        
+        tween:Play()
+        tween.Completed:Wait() -- Espera o personagem chegar fisicamente ao baú
+        
+        bV:Destroy() -- Remove a trava de gravidade após chegar
+    end
 end
 
 -- 1. CRIAR A INTERFACE VISUAL NATIVA
@@ -19,10 +50,9 @@ local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
 local AttackToggle = Instance.new("TextButton")
-local ChestToggle = Instance.new("TextButton") -- Novo botão de baús
+local ChestToggle = Instance.new("TextButton")
 local CloseButton = Instance.new("TextButton")
 
--- Configurações da Janela Principal
 ScreenGui.Name = "HubNativo"
 ScreenGui.Parent = playerGui
 ScreenGui.ResetOnSpawn = false
@@ -35,7 +65,6 @@ MainFrame.Size = UDim2.new(0, 250, 0, 300)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
--- Título do Menu
 Title.Name = "Title"
 Title.Parent = MainFrame
 Title.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
@@ -61,7 +90,6 @@ AttackToggle.MouseButton1Click:Connect(function()
     if _G.AutoAttack then
         AttackToggle.Text = "Auto Ataque: LIGADO"
         AttackToggle.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-        
         task.spawn(function()
             while _G.AutoAttack do
                 local character = player.Character
@@ -78,7 +106,7 @@ AttackToggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- Botão 2: Auto Chest (NOVA LÓGICA DE FARM DE DINHEIRO)
+-- Botão 2: Auto Chest com Tween Anti-Ban seguro
 ChestToggle.Name = "ChestToggle"
 ChestToggle.Parent = MainFrame
 ChestToggle.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
@@ -95,35 +123,34 @@ ChestToggle.MouseButton1Click:Connect(function()
         ChestToggle.Text = "Auto Chest: LIGADO"
         ChestToggle.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
         
-        -- Loop que varre o mapa procurando baús
         task.spawn(function()
             while _G.AutoChest do
                 local character = player.Character
                 if character and character:FindFirstChild("HumanoidRootPart") then
-                    local encontrado = false
+                    local encontrouBau = false
                     
-                    -- Procura baús no Workspace inteiro
                     for _, objeto in pairs(workspace:GetDescendants()) do
-                        if _G.AutoChest == false then break end
+                        if not _G.AutoChest then break end
                         
-                        -- Verifica se o objeto é um baú e tem uma parte física para tocar
+                        -- Procura gatilhos de toque de baús ativos no mapa
                         if objeto:IsA("TouchTransmitter") and objeto.Parent and objeto.Parent.Name:match("Chest") then
                             local bauPart = objeto.Parent
                             if bauPart:IsA("BasePart") then
-                                encontrado = true
-                                -- Teleporta o jogador direto para a posição do baú
-                                character.HumanoidRootPart.CFrame = bauPart.CFrame
-                                task.wait(0.2) -- Pequena pausa para o jogo registrar a coleta
+                                encontrouBau = true
+                                
+                                -- Executa o voo suave até a posição exata do baú
+                                voarPara(bauPart.CFrame)
+                                task.wait(0.3) -- Tempo para o servidor computar o dinheiro coletado
                             end
                         end
                     end
                     
-                    -- Se varreu o mapa e não achou nenhum baú ativo, espera os baús renascerem (respawn)
-                    if not encontrado then
+                    -- Se limpou o mapa inteiro, aguarda o respawn geral de baús
+                    if not encontrouBau then
                         task.wait(5)
                     end
                 end
-                task.wait(0.1)
+                task.wait(0.5)
             end
         end)
     else
