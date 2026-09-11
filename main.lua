@@ -10,7 +10,7 @@ _G.AutoFarmLevel = false
 _G.AutoChest = false
 _G.AutoFruitSniper = false
 _G.AutoStoreFruits = false
-_G.VelocidadeVoo = 160 -- Velocidade balanceada indetectável
+_G.VelocidadeVoo = 160 
 _G.BlackScreen = false
 
 local Players = game:GetService("Players")
@@ -19,7 +19,7 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Evita abrir menus duplicados e causar crash no executor
+-- Remove Hub duplicado na tela para não travar
 if playerGui:FindFirstChild("MegaKaitunHub") then
     playerGui.MegaKaitunHub:Destroy()
 end
@@ -49,7 +49,7 @@ local function voarPara(cframeAlvo)
     end
 end
 
--- Mecânica de Noclip dos Kaituns: Remove colisões para atravessar o mapa sem bugar
+-- Mecânica de Noclip dos Kaituns
 task.spawn(function()
     RunService.Stepped:Connect(function()
         if _G.AutoChest or _G.AutoFruitSniper or _G.AutoFarmLevel then
@@ -65,7 +65,7 @@ task.spawn(function()
     end)
 end)
 
--- Sistema de Disparo de Comandos Seguros para os Servidores do Blox Fruits
+-- Sistema de Disparo de Comandos Seguros
 local function dispararRemote(tipo, caminho, ...)
     local args = {...}
     local sucesso, resultado = pcall(function()
@@ -118,7 +118,6 @@ ContentContainer.BackgroundTransparency = 1
 ContentContainer.Position = UDim2.new(0, 130, 0, 40)
 ContentContainer.Size = UDim2.new(1, -130, 1, -40)
 
--- Tela Preta Protetora (Reduz esforço da sua GPU ao farmar de madrugada)
 local BlackScreenFrame = Instance.new("Frame")
 BlackScreenFrame.Parent = ScreenGui
 BlackScreenFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -128,10 +127,10 @@ BlackScreenFrame.Visible = false
 local BlackScreenLabel = Instance.new("TextLabel")
 BlackScreenLabel.Parent = BlackScreenFrame
 BlackScreenLabel.BackgroundTransparency = 1
-BlackScreenLabel.Position = UDim2.new(0.4, 0, 0.45, 0)
-BlackScreenLabel.Size = UDim2.new(0, 200, 0, 50)
+BlackScreenLabel.Position = UDim2.new(0.3, 0, 0.45, 0)
+BlackScreenLabel.Size = UDim2.new(0, 300, 0, 50)
 BlackScreenLabel.Font = Enum.Font.SourceSansBold
-BlackScreenLabel.Text = "MODO ECONOMIA ATIVO (KAITUN RUNNING)\nClique em qualquer lugar para desativar"
+BlackScreenLabel.Text = "MODO ECONOMIA ATIVO (KAITUN RUNNING)\nClique na tela para desativar"
 BlackScreenLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
 BlackScreenLabel.TextSize = 16
 
@@ -208,10 +207,8 @@ local function criarBotaoSimples(parent, texto, posY, callback)
     btn.MouseButton1Click:Connect(callback)
 end
 
--- =======================================================
--- ABA 1: CONFIGURAÇÃO DE COMBATE E AUTO FARM
--- =======================================================
-criarToggle(PageFarm, "Fast Attack (Ataque M1 Rápido)", 15, function(state)
+-- ABA 1: COMBATE E AUTO FARM
+criarToggle(PageFarm, "Fast Attack (Ataque Rápido)", 15, function(state)
     _G.FastAttack = state
     if state then
         task.spawn(function()
@@ -220,7 +217,6 @@ criarToggle(PageFarm, "Fast Attack (Ataque M1 Rápido)", 15, function(state)
                 if character then
                     local tool = character:FindFirstChildOfClass("Tool")
                     if tool then
-                        -- Envia comandos de ativação ultra veloz simulando o Banana Cat
                         tool:Activate()
                         pcall(function()
                             game:GetService("VirtualUser"):CaptureController()
@@ -228,13 +224,13 @@ criarToggle(PageFarm, "Fast Attack (Ataque M1 Rápido)", 15, function(state)
                         end)
                     end
                 end
-                task.wait(0.01) -- Velocidade limite de pacotes sem travar
+                task.wait(0.01)
             end
         end)
     end
 end)
 
-criarToggle(PageFarm, "Auto Farm Level (Voo + Target)", 65, function(state)
+criarToggle(PageFarm, "Auto Farm Level (Voo)", 65, function(state)
     _G.AutoFarmLevel = state
     if state then
         task.spawn(function()
@@ -258,10 +254,19 @@ criarToggle(PageFarm, "Auto Farm Level (Voo + Target)", 65, function(state)
     end
 end)
 
-criarToggle(PageFarm, "Auto Chest Farm (Coletar Baús)", 115, function(state)
+criarToggle(PageFarm, "Auto Chest Farm (Baús)", 115, function(state)
     _G.AutoChest = state
     if state then
         task.spawn(function()
             while _G.AutoChest do
                 local character = player.Character
                 if character and character:FindFirstChild("HumanoidRootPart") then
+                    for _, objeto in pairs(workspace:GetDescendants()) do
+                        if not _G.AutoChest then break end
+                        if objeto:IsA("TouchTransmitter") and objeto.Parent and objeto.Parent.Name:match("Chest") then
+                            local bauPart = objeto.Parent
+                            if bauPart:IsA("BasePart") then
+                                voarPara(bauPart.CFrame)
+                                task.wait(0.3)
+                            end
+                        end
